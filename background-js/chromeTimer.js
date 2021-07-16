@@ -1,206 +1,126 @@
-const tabTimeObjectKey="tabTimesObject" //{key: url, value: {url :string , trackedSeconds:number, lastDateVal:number}}
-const lastActiveTabKey="lastActiveTab" //{url: string, lastDateVal:number}
+const tabTimeObjectKey = "tabTimesObject" //{key: url, value: {url :string , trackedSeconds:number, lastDateVal:number}}
+const lastActiveTabKey = "lastActiveTab" //{url: string, lastDateVal:number}
 
 
-chrome.windows.onFocusChanged.addListener((windowId)=>{
-    if(windowId==chrome.windows.WINDOW_ID_NONE)
-    {
+chrome.windows.onFocusChanged.addListener((windowId) => {
+    if (windowId == chrome.windows.WINDOW_ID_NONE) {
         processTabChange(false);
     }
-    else{
+    else {
         processTabChange(true);
     }
 
 });
 
-chrome.tabs.onUpdated.addListener(function(tabId,changeInfo,tab){
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 
     onTabTrack(tab);
-    
+
 })
 
 chrome.tabs.onActivated.addListener(onTabTrack);
 
-function onTabTrack(activeInfo){
-    let tabId=activeInfo.tabId;
-    let windowId=activeInfo.windowId;
+function onTabTrack(activeInfo) {
+    let tabId = activeInfo.tabId;
+    let windowId = activeInfo.windowId;
 
     processTabChange(true);
 }
 
-function processTabChange(isWindowActive)
-{
-    console.log("isWindowActive: "+ isWindowActive);
+function processTabChange(isWindowActive) {
+    console.log("isWindowActive: " + isWindowActive);
 
-    
 
-    setTimeout(()=>{chrome.tabs.query({'active':true},function (tabs){
-        console.log(tabs);
 
-        if(tabs.length==0 && !isWindowActive)
-        {
-            chrome.storage.local.get([tabTimeObjectKey,lastActiveTabKey], function(results){
+    setTimeout(() => {
+        chrome.tabs.query({ 'active': true, currentWindow: true }, function (tabs) {
+            console.log(tabs);
+            let hostName = ""
+            if (tabs.length > 0 && tabs[0] != null) {
+                let currentTab = tabs[0];
+                let url = currentTab.url;
+                hostName = url;
+                let title = currentTab.title;
 
-                let tabTimeObjectString=results[tabTimeObjectKey];
-                let lastActiveTabString=results[lastActiveTabKey];
-            
-
-                tabTimeObject={};
-                lastActiveTab={};
-
-                if(tabTimeObjectString!=null)
-                {
-                    tabTimeObject=JSON.parse(tabTimeObjectString);
+                try {
+                    let urlOject = new URL(url);
+                    hostName = urlOject.hostname;
                 }
-                if(lastActiveTabString!=null)
-                {
-                    lastActiveTab=JSON.parse(lastActiveTabString);
+                catch (err) {
+                    console.log(`urlOject error :${err}`);
                 }
-
-                if(lastActiveTab.hasOwnProperty("url") && lastActiveTab.hasOwnProperty("lastDateVal"))
-                {
-                    let lastUrl=lastActiveTab["url"];
-                    let currentDateVal=Date.now();
-                    let passedSeconds=(currentDateVal-lastActiveTab["lastDateVal"])*0.001;
-
-                    if(tabTimeObject.hasOwnProperty(lastUrl)){
-                        let lastUrlObjectInfo=tabTimeObject[lastUrl];
-                        if(lastUrlObjectInfo.hasOwnProperty("trackedSeconds")){
-                            lastUrlObjectInfo["trackedSeconds"]=lastUrlObjectInfo["trackedSeconds"]+passedSeconds;
-                        }
-                        else{
-                            lastUrlObjectInfo["trackedSeconds"]=passesSeconds;
-                        }
-                        console.log("lastUrlObjectInfo: ");
-                        console.log(lastUrlObjectInfo);
-                    }
-                    else{
-                        let newUrlInfo={url:lastUrl,trackedSeconds:passedSeconds, lastDateVal:currentDateVal,startDateVal:lastActiveTab["lastDateVal"]};
-                        tabTimeObject[lastUrl]=newUrlInfo;
-                        console.log("newUrlInfo: ");
-                        console.log(newUrlInfo);
-                    }   
-                }
-
-
-                let currentDateVal=Date.now();
-
-                let lastTabInfo={};
-
-                if(!isWindowActive)
-                {
-                    console.log("window is not active right now");
-                
-                }
-
-                let newLastTabOject={};
-                newLastTabOject[lastActiveTabKey]=JSON.stringify(lastTabInfo);
-
-                chrome.storage.local.set(newLastTabOject,function(){
-                    console.log("lastActiveTab stored: Nothing" );
-                    console.log(newLastTabOject);
-                    const tabTimesObjectString=JSON.stringify(tabTimeObject);
-                    let newTabTimesOject={};
-                    newTabTimesOject[tabTimeObjectKey]=tabTimesObjectString;
-                    chrome.storage.local.set(newTabTimesOject,function(){
-
-                        console.log("newTavTimesObject: ");
-                        console.log(newTabTimesOject);
-                    });
-                      
-                });
-            });
-        }
-
-        if(tabs.length>0 && tabs[0]!=null)
-        {
-            let currentTab=tabs[0];
-            let url=currentTab.url;
-            let hostName=url;
-            let title=currentTab.title;
-
-            try{
-                let urlOject=new URL(url);
-                hostName=urlOject.hostname;
-            }
-            catch(err){
-                console.log(`urlOject error :${err}`);
             }
 
-            chrome.storage.local.get([tabTimeObjectKey,lastActiveTabKey], function(results){
+            chrome.storage.local.get([tabTimeObjectKey, lastActiveTabKey], function (results) {
 
-                let tabTimeObjectString=results[tabTimeObjectKey];
-                let lastActiveTabString=results[lastActiveTabKey];
+                let tabTimeObjectString = results[tabTimeObjectKey];
+                let lastActiveTabString = results[lastActiveTabKey];
                 console.log("background.js, get result");
                 console.log(results);
 
-                tabTimeObject={};
-                lastActiveTab={};
+                tabTimeObject = {};
+                lastActiveTab = {};
 
-                if(tabTimeObjectString!=null)
-                {
-                    tabTimeObject=JSON.parse(tabTimeObjectString);
+                if (tabTimeObjectString != null) {
+                    tabTimeObject = JSON.parse(tabTimeObjectString);
                 }
-                if(lastActiveTabString!=null)
-                {
-                    lastActiveTab=JSON.parse(lastActiveTabString);
+                if (lastActiveTabString != null) {
+                    lastActiveTab = JSON.parse(lastActiveTabString);
                 }
 
-                if(lastActiveTab.hasOwnProperty("url") && lastActiveTab.hasOwnProperty("lastDateVal"))
-                {
-                    let lastUrl=lastActiveTab["url"];
-                    let currentDateVal=Date.now();
-                    let passedSeconds=(currentDateVal-lastActiveTab["lastDateVal"])*0.001;
+                if (lastActiveTab.hasOwnProperty("url") && lastActiveTab.hasOwnProperty("lastDateVal")) {
+                    let lastUrl = lastActiveTab["url"];
+                    let currentDateVal = Date.now();
+                    let passedSeconds = (currentDateVal - lastActiveTab["lastDateVal"]) * 0.001;
 
-                    if(tabTimeObject.hasOwnProperty(lastUrl)){
-                        let lastUrlObjectInfo=tabTimeObject[lastUrl];
-                        if(lastUrlObjectInfo.hasOwnProperty("trackedSeconds")){
-                            lastUrlObjectInfo["trackedSeconds"]=lastUrlObjectInfo["trackedSeconds"]+passedSeconds;
+                    if (tabTimeObject.hasOwnProperty(lastUrl)) {
+                        let lastUrlObjectInfo = tabTimeObject[lastUrl];
+                        if (lastUrlObjectInfo.hasOwnProperty("trackedSeconds")) {
+                            lastUrlObjectInfo["trackedSeconds"] = lastUrlObjectInfo["trackedSeconds"] + passedSeconds;
                         }
-                        else{
-                            lastUrlObjectInfo["trackedSeconds"]=passesSeconds;
+                        else {
+                            lastUrlObjectInfo["trackedSeconds"] = passesSeconds;
                         }
                         console.log("lastUrlObjectInfo: ");
                         console.log(lastUrlObjectInfo);
                     }
-                    else{
-                        let newUrlInfo={url:lastUrl,trackedSeconds:passedSeconds, lastDateVal:currentDateVal,startDateVal:lastActiveTab["lastDateVal"]};
-                        tabTimeObject[lastUrl]=newUrlInfo;
+                    else {
+                        let newUrlInfo = { url: lastUrl, trackedSeconds: passedSeconds, lastDateVal: currentDateVal, startDateVal: lastActiveTab["lastDateVal"] };
+                        tabTimeObject[lastUrl] = newUrlInfo;
                         console.log("newUrlInfo: ");
                         console.log(newUrlInfo);
-                    }   
+                    }
                 }
 
 
-                let currentDateVal=Date.now();
+                let currentDateVal = Date.now();
 
-                let lastTabInfo={"url":hostName,"lastDateVal": currentDateVal};
+                let lastTabInfo = { "url": hostName, "lastDateVal": currentDateVal };
 
-                if(!isWindowActive)
-                {
+                if (!isWindowActive) {
                     console.log("window is not active right now");
-                    lastTabInfo={};
+                    lastTabInfo = {};
                 }
 
-                let newLastTabOject={};
-                newLastTabOject[lastActiveTabKey]=JSON.stringify(lastTabInfo);
+                let newLastTabOject = {};
+                newLastTabOject[lastActiveTabKey] = JSON.stringify(lastTabInfo);
 
-                chrome.storage.local.set(newLastTabOject,function(){
-                    console.log("lastActiveTab stored: "+ hostName);
+                chrome.storage.local.set(newLastTabOject, function () {
+                    console.log("lastActiveTab stored: " + hostName);
                     console.log(newLastTabOject);
-                    const tabTimesObjectString=JSON.stringify(tabTimeObject);
-                    let newTabTimesOject={};
-                    newTabTimesOject[tabTimeObjectKey]=tabTimesObjectString;
-                    chrome.storage.local.set(newTabTimesOject,function(){
+                    const tabTimesObjectString = JSON.stringify(tabTimeObject);
+                    let newTabTimesOject = {};
+                    newTabTimesOject[tabTimeObjectKey] = tabTimesObjectString;
+                    chrome.storage.local.set(newTabTimesOject, function () {
 
                         console.log("newTavTimesObject: ");
                         console.log(newTabTimesOject);
                     });
-                      
+
                 });
             });
 
-        }
-    });
-},500); 
+
+        });
+    }, 500);
 }
